@@ -1,4 +1,4 @@
-import z from 'zod';
+import { z } from 'zod';
 
 export const registerSchema = z.object({
   name: z.string(),
@@ -21,3 +21,13 @@ export const singleUserSchema = z.object({
 export const paramIdSchema = z.object({
   id: z.string(),
 });
+
+export const resetPasswordSchema = z
+  .object({
+    password: z.string(),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'Password and Confirm Password must match',
+  });

@@ -4,6 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { mailtrap, sender } from '../utils/mailtrap';
+import { transport } from '../utils/transport';
+import { resetPasswordMail } from '../utils/mailTemplate';
 
 export const registerUser = async ({ name, email, password, file }) => {
   const emailExist = await userRepositories.isEmailExist(email);
@@ -45,6 +48,10 @@ export const loginUser = async ({ email, password }) => {
   }
 
   const user = await userRepositories.findUserByEmail(email);
+
+  if (!user) {
+    throw new Error('User not found!');
+  }
 
   if (!bcrypt.compareSync(password, user.password)) {
     throw new Error('Invalid credentials!');
@@ -97,4 +104,32 @@ export const listUsers = async ({ page = 1, limit = 10, search = '' }) => {
   }));
 };
 
-// export const getEmailReset = (email) => {};
+export const getEmailReset = async (email) => {
+  try {
+    const { token } = await userRepositories.createPasswordReset(email);
+    const resetLink = `${process.env.RESET_PASSWORD_LINK}${token}`;
+
+    const mailOptions = resetPasswordMail(email, resetLink);
+    const result = await transport.sendMail(mailOptions);
+
+    // console.log(result.messageId);
+    return true;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+
+export const updatePassword = async (data, token) => {
+  const tokenData = await userRepositories.findResetDataByToken(token);
+
+  if (!tokenData) {
+    throw new Error('Token reset invalid!');
+  }
+
+  await userRepositories.updatePassword(tokenData.user.email, bcrypt.hashSync(data.password, 12));
+
+  await userRepositories.deleteTokenResetById(tokenData.id);
+
+  return true;
+};

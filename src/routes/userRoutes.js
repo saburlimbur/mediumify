@@ -21,6 +21,9 @@ const uploadPhoto = multer({
 userRoutes.post('/auth/register', uploadPhoto.single('photo'), userController.registerController);
 userRoutes.post('/auth/login', userController.loginController);
 
+userRoutes.post('/auth/reset-password', userController.requestEmailReset);
+userRoutes.put('/auth/reset-password/:tokenId', userController.updatePassword);
+
 userRoutes.get('/auth/single_user/:id', verifyToken, userController.singleUserController);
 userRoutes.get('/users', verifyToken, userController.listUsersController);
 

@@ -53,8 +53,15 @@ export const findUserByEmail = async (email) => {
   });
 };
 
-export const listsUsers = async () => {
+export const listsUsers = async ({ skip = 0, take = 10, search = '' } = {}) => {
   return await prisma.user.findMany({
+    where: search
+      ? {
+          OR: [{ name: { contains: search, mode: 'insensitive' } }, { email: { contains: search, mode: 'insensitive' } }],
+        }
+      : {},
+    skip,
+    take,
     select: {
       id: true,
       name: true,
@@ -65,7 +72,50 @@ export const listsUsers = async () => {
   });
 };
 
-// export const createPasswordReset = async (email) => {
-//   const user = await findUserByEmail(email);
-//   const token = crypto.randomBytes(32).toString('hex');
-// };
+export const findResetDataByToken = async (token) => {
+  return await prisma.passwordReset.findFirst({
+    where: {
+      token: token,
+    },
+    include: {
+      user: {
+        select: {
+          email: true,
+        },
+      },
+    },
+  });
+};
+
+export const createPasswordReset = async (email) => {
+  const user = await findUserByEmail(email);
+  const token = crypto.randomBytes(32).toString('hex');
+
+  return await prisma.passwordReset.create({
+    data: {
+      user_id: user.id,
+      token,
+    },
+  });
+};
+
+export const updatePassword = async (email, password) => {
+  const user = await findUserByEmail(email);
+
+  return await prisma.user.update({
+    where: {
+      id: user.id,
+    },
+    data: {
+      password: password,
+    },
+  });
+};
+
+export const deleteTokenResetById = async (id) => {
+  return await prisma.passwordReset.delete({
+    where: {
+      id,
+    },
+  });
+};

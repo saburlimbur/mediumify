@@ -21,8 +21,9 @@ model User {
   photo    String
   bio      String @default("")
 
-  Post    Post[]
-  Library Library[]
+  Post            Post[]
+  Library         Library[]
+  password_resets PasswordReset[]
 
   @@map("users")
 }
@@ -52,6 +53,15 @@ model Library {
   posts Post[] @relation("LibrarySavedPosts")
 
   @@map("librarys")
+}
+
+model PasswordReset {
+  id      String @id @default(uuid()) @db.Char(36)
+  user_id String
+  token   String
+  user    User   @relation(fields: [user_id], references: [id])
+
+  @@map("user_password_resets")
 }
 
 enum TopicsType {

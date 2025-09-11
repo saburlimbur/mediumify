@@ -1,6 +1,6 @@
 import { request, response } from 'express';
 import fs from 'fs';
-import { loginSchema, paramIdSchema, registerSchema, singleUserSchema } from '../utils/schema/user';
+import { loginSchema, paramIdSchema, registerSchema, resetPasswordSchema, singleUserSchema } from '../utils/schema/user';
 
 import * as userServices from '../services/userServices';
 
@@ -72,6 +72,7 @@ export const singleUserController = async (req = request, res = response, next) 
 
     if (!paramValidation.success) {
       const errorMessage = paramValidation.error.issues.map((err) => `${err.path} - ${err.message}`);
+
       return res.status(400).json({
         success: false,
         message: 'Invalid parameter',
@@ -91,7 +92,7 @@ export const singleUserController = async (req = request, res = response, next) 
   }
 };
 
-export const listUsersController = async (req, res, next) => {
+export const listUsersController = async (req = request, res = response, next) => {
   try {
     const { page = 1, limit = 10, search = '' } = req.query;
 
@@ -105,6 +106,85 @@ export const listUsersController = async (req, res, next) => {
       success: true,
       message: 'List of users retrieved successfully',
       data: users,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const requestEmailReset = async (req = request, res = response, next) => {
+  try {
+    const parse = loginSchema
+      .pick({
+        email: true,
+      })
+      .safeParse(req.body); // hanya email
+
+    if (!parse.success) {
+      const errorMessage = parse.error.issues.map((err) => `${err.path} - ${err.message}`);
+
+      return res.status(400).json({
+        success: false,
+        message: errorMessage,
+      });
+    }
+
+    await userServices.getEmailReset(parse.data.email);
+
+    return res.json({
+      success: true,
+      message: 'Reset link send to email',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getEmailReset = async (req = request, res = response, next) => {
+  try {
+    const parse = loginSchema.pick({ email: email }).safeParse(req.body); // only email
+
+    if (!parse.success) {
+      const errorMessage = parse.error.issues.map((err) => `${err.path} - ${err.message}`);
+
+      return res.status(400).json({
+        success: false,
+        message: errorMessage,
+      });
+    }
+
+    await userServices.getEmailReset(parse.data.email);
+
+    return res.json({
+      success: true,
+      message: 'Reset link send to email',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updatePassword = async (req = request, res = response, next) => {
+  try {
+    const parse = resetPasswordSchema.safeParse(req.body);
+
+    if (!parse.success) {
+      const errorMessage = parse.error.issues.map((err) => `${err.path} - ${err.message}`);
+
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        detail: errorMessage,
+      });
+    }
+
+    const { tokenId } = req.params;
+
+    await userServices.updatePassword(parse.data, tokenId);
+
+    return res.json({
+      success: true,
+      message: 'Reset password succesfully!',
     });
   } catch (error) {
     next(error);
