@@ -17,7 +17,7 @@ export default async function verifyToken(req = request, res = response, next) {
       }
 
       const data = decoded;
-      const user = await userRepositories.getUserById(data.id);
+      const user = await userRepositories.findUniqueUserId(data.id);
 
       req.user = {
         id: user.id,

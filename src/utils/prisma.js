@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
+/** @type {PrismaClient} */
 const prisma = new PrismaClient().$extends({
   result: {
     user: {

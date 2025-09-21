@@ -34,6 +34,9 @@ model Post {
   description String
   photo       String
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   topics TopicsType
 
   authorId String
@@ -52,7 +55,7 @@ model Library {
 
   posts Post[] @relation("LibrarySavedPosts")
 
-  @@map("librarys")
+  @@map("libraries")
 }
 
 model PasswordReset {

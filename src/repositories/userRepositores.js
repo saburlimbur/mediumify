@@ -11,17 +11,53 @@ export const findUserById = async (id) => {
       email: true,
       name: true,
       photo: true,
+      bio: true,
+      Post: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          photo: true,
+          createdAt: true,
+          updatedAt: true,
+          topics: true,
+        },
+      },
     },
   });
 };
 
-export const getUserById = async (id) => {
-  return await prisma.user.findFirstOrThrow({
+export const updateUserById = async (id, data) => {
+  return await prisma.user.update({
+    where: {
+      id,
+    },
+    data,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      photo: true,
+      bio: true,
+    },
+  });
+};
+
+export const findUniqueUserId = async (id) => {
+  return await prisma.user.findUnique({
     where: {
       id,
     },
   });
 };
+
+// export const getUserById = async (id) => {
+//   return await prisma.user.findUniqueOrThrow({
+//     where: {
+//       id,
+//     },
+//   });
+// };
 
 export const isEmailExist = async (email) => {
   const count = await prisma.user.count({
@@ -46,9 +82,24 @@ export const createUser = async ({ name, email, password, photo }) => {
 };
 
 export const findUserByEmail = async (email) => {
-  return await prisma.user.findFirstOrThrow({
+  return await prisma.user.findUniqueOrThrow({
     where: {
       email: email,
+    },
+  });
+};
+
+export const findUserByEmailOrName = async (identifier) => {
+  return await prisma.user.findFirst({
+    where: {
+      OR: [
+        {
+          email: identifier,
+        },
+        {
+          name: identifier,
+        },
+      ],
     },
   });
 };
@@ -117,5 +168,43 @@ export const deleteTokenResetById = async (id) => {
     where: {
       id,
     },
+  });
+};
+
+export const deleteUser = async (id) => {
+  return await prisma.$transaction(async (prisma) => {
+    await prisma.library.deleteMany({
+      where: {
+        posts: {
+          some: {
+            authorId: id,
+          },
+        },
+      },
+    });
+
+    await prisma.library.deleteMany({
+      where: {
+        userId: id,
+      },
+    });
+
+    await prisma.passwordReset.deleteMany({
+      where: {
+        user_id: id,
+      },
+    });
+
+    await prisma.post.deleteMany({
+      where: {
+        authorId: id,
+      },
+    });
+
+    return await prisma.user.delete({
+      where: {
+        id,
+      },
+    });
   });
 };

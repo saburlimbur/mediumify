@@ -4,7 +4,6 @@ import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { mailtrap, sender } from '../utils/mailtrap';
 import { transport } from '../utils/transport';
 import { resetPasswordMail } from '../utils/mailTemplate';
 
@@ -40,20 +39,17 @@ export const registerUser = async ({ name, email, password, file }) => {
   };
 };
 
-export const loginUser = async ({ email, password }) => {
-  const emailExist = await userRepositories.isEmailExist(email);
+export const loginUser = async ({ name, email, password }) => {
+  const identifier = email ?? name;
 
-  if (!emailExist) {
-    throw new Error('Email not registered!');
-  }
-
-  const user = await userRepositories.findUserByEmail(email);
+  const user = await userRepositories.findUserByEmailOrName(identifier);
 
   if (!user) {
     throw new Error('User not found!');
   }
 
-  if (!bcrypt.compareSync(password, user.password)) {
+  const isValid = bcrypt.compareSync(password, user.password);
+  if (!isValid) {
     throw new Error('Invalid credentials!');
   }
 
@@ -71,7 +67,7 @@ export const loginUser = async ({ email, password }) => {
 };
 
 export const singleUser = async ({ id }) => {
-  const userId = await userRepositories.getUserById(id);
+  const userId = await userRepositories.findUniqueUserId(id);
 
   if (!userId) {
     throw new Error('User id not found!');
@@ -84,7 +80,9 @@ export const singleUser = async ({ id }) => {
     email: user.email,
     name: user.name,
     photo: user.photo,
+    bio: user.bio,
     // token: undefined,
+    posts: user.Post || [],
   };
 };
 
@@ -130,6 +128,90 @@ export const updatePassword = async (data, token) => {
   await userRepositories.updatePassword(tokenData.user.email, bcrypt.hashSync(data.password, 12));
 
   await userRepositories.deleteTokenResetById(tokenData.id);
+
+  return true;
+};
+
+export const updateUser = async (id, { name, email, photo, bio, file }) => {
+  const existingUser = await userRepositories.findUniqueUserId(id);
+
+  if (!existingUser) {
+    throw new Error('User not found!');
+  }
+
+  if (email && email !== existingUser.email) {
+    const emailExists = await userRepositories.isEmailExist(email);
+    if (emailExists) {
+      if (file && file.path) {
+        fs.unlink(path.resolve(file.path), (err) => {
+          if (err) console.error(err);
+        });
+      }
+      throw new Error('Email already taken by another user');
+    }
+  }
+
+  const updateData = {};
+
+  if (name !== undefined) updateData.name = name;
+  if (email !== undefined) updateData.email = email;
+  if (bio !== undefined) updateData.bio = bio;
+
+  if (file && file.filename) {
+    updateData.photo = file.filename;
+
+    if (existingUser.photo && existingUser.photo !== 'default.jpg') {
+      const oldPhotoPath = path.join('uploads', existingUser.photo);
+      fs.unlink(oldPhotoPath, (err) => {
+        if (err) console.error('Error deleting old photo:', err);
+      });
+    }
+  } else if (photo !== undefined) {
+    updateData.photo = photo;
+  }
+
+  const updatedUser = await userRepositories.updateUserById(id, updateData);
+
+  return {
+    id: updatedUser.id,
+    name: updatedUser.name,
+    email: updatedUser.email,
+    photo: updatedUser.photo,
+    bio: updatedUser.bio,
+  };
+};
+
+export const deleteUser = async (id) => {
+  const user = await userRepositories.findUniqueUserId(id);
+
+  if (!user) {
+    throw new Error('User not found!');
+  }
+
+  const userWithPosts = await userRepositories.findUserById(id);
+
+  if (user.photo && user.photo !== 'default.jpg' && user.photo !== null) {
+    const userPhotoPath = path.resolve(__dirname, `../../public/assets/uploads/users/${user.photo}`);
+
+    if (fs.existsSync(userPhotoPath)) {
+      fs.unlinkSync(userPhotoPath);
+    }
+  }
+
+  // delete from directory path
+  if (userWithPosts.Post && userWithPosts.Post.length > 0) {
+    userWithPosts.Post.forEach((post) => {
+      if (post.photo) {
+        const postPhotoPath = path.resolve(__dirname, `../../public/assets/uploads/posts/${post.photo}`);
+
+        if (fs.existsSync(postPhotoPath)) {
+          fs.unlinkSync(postPhotoPath);
+        }
+      }
+    });
+  }
+
+  await userRepositories.deleteUser(id);
 
   return true;
 };

@@ -1,6 +1,6 @@
 import { request, response } from 'express';
 import fs from 'fs';
-import { loginSchema, paramIdSchema, registerSchema, resetPasswordSchema, singleUserSchema } from '../utils/schema/user';
+import { loginSchema, paramIdSchema, registerSchema, resetPasswordSchema, singleUserSchema, updateUserSchema } from '../utils/schema/user';
 
 import * as userServices from '../services/userServices';
 
@@ -67,7 +67,6 @@ export const loginController = async (req = request, res = response, next) => {
 
 export const singleUserController = async (req = request, res = response, next) => {
   try {
-    // sama saja spt { id } = req.params, bedanya ini di buat schema buat req.params nya
     const paramValidation = paramIdSchema.safeParse(req.params);
 
     if (!paramValidation.success) {
@@ -88,6 +87,54 @@ export const singleUserController = async (req = request, res = response, next) 
       data: userData,
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+export const updateUserController = async (req = request, res = response, next) => {
+  try {
+    const paramValidation = paramIdSchema.safeParse(req.params);
+
+    if (!paramValidation.success) {
+      const errorMessage = paramValidation.error.issues.map((err) => `${err.path} - ${err.message}`);
+
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid parameter',
+        detail: errorMessage,
+      });
+    }
+
+    const parse = updateUserSchema.safeParse(req.body);
+
+    if (!parse.success) {
+      const errorMessage = parse.error.issues.map((err) => `${err.path} - ${err.message}`);
+
+      if (req.file) fs.unlinkSync(req.file.path);
+
+      return res.status(400).json({
+        success: false,
+        message: 'Validation Error',
+        detail: errorMessage,
+      });
+    }
+
+    const updatedUser = await userServices.updateUser(paramValidation.data.id, {
+      ...parse.data,
+      file: req.file,
+    });
+
+    return res.json({
+      success: true,
+      message: 'User updated successfully',
+      data: updatedUser,
+    });
+  } catch (error) {
+    if (req.file && req.file.path) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Error deleting uploaded file:', err);
+      });
+    }
     next(error);
   }
 };
@@ -140,30 +187,6 @@ export const requestEmailReset = async (req = request, res = response, next) => 
   }
 };
 
-export const getEmailReset = async (req = request, res = response, next) => {
-  try {
-    const parse = loginSchema.pick({ email: email }).safeParse(req.body); // only email
-
-    if (!parse.success) {
-      const errorMessage = parse.error.issues.map((err) => `${err.path} - ${err.message}`);
-
-      return res.status(400).json({
-        success: false,
-        message: errorMessage,
-      });
-    }
-
-    await userServices.getEmailReset(parse.data.email);
-
-    return res.json({
-      success: true,
-      message: 'Reset link send to email',
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 export const updatePassword = async (req = request, res = response, next) => {
   try {
     const parse = resetPasswordSchema.safeParse(req.body);
@@ -185,6 +208,30 @@ export const updatePassword = async (req = request, res = response, next) => {
     return res.json({
       success: true,
       message: 'Reset password succesfully!',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteUserController = async (req = request, res = response, next) => {
+  try {
+    const paramValidation = paramIdSchema.safeParse(req.params);
+
+    if (!paramValidation.success) {
+      const errorMessage = paramValidation.error.issues.map((err) => `${err.path} - ${err.message}`);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid parameter',
+        detail: errorMessage,
+      });
+    }
+
+    await userServices.deleteUser(paramValidation.data.id);
+
+    return res.json({
+      success: true,
+      message: 'User and all related data deleted successfully',
     });
   } catch (error) {
     next(error);

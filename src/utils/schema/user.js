@@ -6,10 +6,15 @@ export const registerSchema = z.object({
   password: z.string(),
 });
 
-export const loginSchema = registerSchema.pick({
-  email: true,
-  password: true,
-});
+export const loginSchema = z
+  .object({
+    name: z.string().optional(),
+    email: z.string().email().optional(),
+    password: z.string().min(6),
+  })
+  .refine((data) => data.name || data.email, {
+    message: 'Either name or email is required',
+  });
 
 export const singleUserSchema = z.object({
   id: z.string(),
@@ -31,3 +36,9 @@ export const resetPasswordSchema = z
     path: ['confirmPassword'],
     message: 'Password and Confirm Password must match',
   });
+
+export const updateUserSchema = z.object({
+  name: z.string().optional(),
+  email: z.string().optional(),
+  bio: z.string().max(100).optional(),
+});
