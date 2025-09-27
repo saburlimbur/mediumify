@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import multer from 'multer';
 
 export const storageUserPhoto = multer.diskStorage({

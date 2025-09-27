@@ -26,6 +26,10 @@ const uploadPhoto = multer({
 postRoutes.post('/post/create', verifyToken, uploadPhoto.single('photo'), postController.createPost);
 
 postRoutes.get('/post/:id', postController.getSinglePost);
-postRoutes.get('/posts', verifyToken, postController.listsUserController);
+postRoutes.get('/posts', postController.listsUserController);
+
+postRoutes.put('/post/update/:id', verifyToken, uploadPhoto.single('photo'), postController.updatePostController);
+
+postRoutes.delete('/post/delete/:id', verifyToken, postController.deletePostController);
 
 export default postRoutes;

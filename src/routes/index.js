@@ -1,7 +1,8 @@
 import postRoutes from './postRoutes';
 import userRoutes from './userRoutes';
+import libraryRoutes from './libraryRoutes';
 
-const routes = [userRoutes, postRoutes];
+const routes = [userRoutes, postRoutes, libraryRoutes];
 
 // aggregator modular route
 const router = (route) => {

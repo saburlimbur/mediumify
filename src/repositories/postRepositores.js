@@ -61,10 +61,35 @@ export const listPosts = async ({ skip = 0, take = 10, search = '' } = {}) => {
   });
 };
 
-// export const findPostById = async (id) => {
-//   return await prisma.post.findUnique({
-//     where: {
-//       id,
-//     },
-//   });
-// };
+export const findPostById = async (id) => {
+  return await prisma.post.findUnique({
+    where: {
+      id,
+    },
+  });
+};
+
+export const deletePost = async (id) => {
+  return await prisma.post.delete({
+    where: {
+      id,
+    },
+  });
+};
+
+export const updatePostById = async (id, data) => {
+  return await prisma.post.update({
+    where: {
+      id,
+    },
+    data,
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      photo: true,
+      topics: true,
+      updatedAt: true,
+    },
+  });
+};

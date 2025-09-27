@@ -1,7 +1,7 @@
 import { request, response } from 'express';
 import * as postServices from '../services/postServices';
 import fs from 'fs';
-import { createPostSchema } from '../utils/schema/post';
+import { createPostSchema, paramIdSchema, updatePostSchema } from '../utils/schema/post';
 
 export const createPost = async (req = request, res = response, next) => {
   try {
@@ -78,6 +78,78 @@ export const listsUserController = async (req = request, res = response, next) =
       data: posts,
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+export const deletePostController = async (req = request, res = response, next) => {
+  try {
+    const paramValidation = paramIdSchema.safeParse(req.params);
+
+    if (!paramValidation.success) {
+      const errorMessage = paramValidation.error.issues.map((err) => `${err.path} - ${err.message}`);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid parameter',
+        detail: errorMessage,
+      });
+    }
+
+    await postServices.deletePost(paramValidation.data.id);
+
+    return res.json({
+      success: true,
+      message: 'Post data deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updatePostController = async (req = request, res = response, next) => {
+  try {
+    const paramValidation = paramIdSchema.safeParse(req.params);
+
+    if (!paramValidation.success) {
+      const errorMessage = paramValidation.error.issues.map((err) => `${err.path} - ${err.message}`);
+
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid parameter',
+        detail: errorMessage,
+      });
+    }
+
+    const parse = updatePostSchema.safeParse(req.body);
+
+    if (!parse.success) {
+      const errorMessage = parse.error.issues.map((err) => `${err.path} - ${err.message}`);
+
+      if (req.file) fs.unlinkSync(req.file.path);
+
+      return res.status(400).json({
+        success: false,
+        message: 'Validation Error',
+        detail: errorMessage,
+      });
+    }
+
+    const updatePost = await postServices.updatePost(paramValidation.data.id, {
+      ...parse.data,
+      file: req.file,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Post updated successfully',
+      data: updatePost,
+    });
+  } catch (error) {
+    if (req.file && req.file.path) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Error deleting uploaded file:', err);
+      });
+    }
     next(error);
   }
 };
