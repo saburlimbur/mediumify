@@ -91,6 +91,29 @@ export const singleUserController = async (req = request, res = response, next) 
   }
 };
 
+export const profileUserController = async (req = request, res = response, next) => {
+  try {
+    const userId = req.user?.id; // after decode id user from jwt
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID not found in token',
+      });
+    }
+
+    const userData = await userServices.singleUser({ id: userId });
+
+    return res.json({
+      success: true,
+      message: 'Get profile successfully',
+      data: userData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateUserController = async (req = request, res = response, next) => {
   try {
     const paramValidation = paramIdSchema.safeParse(req.params);

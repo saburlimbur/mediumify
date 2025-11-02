@@ -28,6 +28,7 @@ userRoutes.put('/user/update/:id', verifyToken, uploadPhoto.single('photo'), use
 
 userRoutes.get('/auth/single_user/:id', verifyToken, userController.singleUserController);
 userRoutes.get('/users', verifyToken, userController.listUsersController);
+userRoutes.get('/user/profile', verifyToken, userController.profileUserController);
 
 userRoutes.delete('/user/delete/:id', verifyToken, userController.deleteUserController);
 
